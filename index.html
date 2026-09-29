@@ -1,0 +1,568 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Synapse AI // Developer Workspace & Code Intelligence Studio</title>
+    <meta name="description" content="Intelligent AI developer workspace with AST neural parsing, automated test generation, real-time code refactoring, and multi-model reasoning streams." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      /* Full-Width Stretched Workspace Grid */
+      body {
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+      .synapse-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box;
+      }
+      .workspace-grid {
+        display: grid;
+        grid-template-columns: 100%;
+        gap: 1.25rem;
+        width: 100%;
+        align-items: start;
+      }
+      @media (min-width: 1024px) {
+        .workspace-grid {
+          grid-template-columns: 260px minmax(0, 1fr) 380px;
+        }
+      }
+      @media (min-width: 1440px) {
+        .workspace-grid {
+          grid-template-columns: 280px minmax(0, 1fr) 420px;
+        }
+      }
+      @media (min-width: 1800px) {
+        .workspace-grid {
+          grid-template-columns: 300px minmax(0, 1fr) 460px;
+        }
+      }
+      .pane-left {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        min-width: 0;
+        width: 100%;
+      }
+      .pane-center {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        min-width: 0;
+        width: 100%;
+      }
+      .pane-right {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+        min-width: 0;
+        width: 100%;
+      }
+
+      /* Syntax Highlighting Styles */
+      .syn-kw { color: #f59e0b; font-weight: 600; }
+      .syn-fn { color: #60a5fa; font-weight: 600; }
+      .syn-str { color: #34d399; }
+      .syn-num { color: #f43f5e; }
+      .syn-type { color: #c084fc; }
+      .syn-comm { color: #78716c; font-style: italic; }
+      .syn-prop { color: #e0a96d; }
+      .syn-punct { color: #a8a29e; }
+
+      /* Diff Lines */
+      .diff-add {
+        background-color: rgba(16, 185, 129, 0.18);
+        border-left: 3px solid #10b981;
+      }
+      .diff-del {
+        background-color: rgba(239, 68, 68, 0.18);
+        border-left: 3px solid #ef4444;
+        text-decoration: line-through;
+        opacity: 0.75;
+      }
+
+      /* Toast Notification */
+      #toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+      }
+      .toast-msg {
+        padding: 10px 18px;
+        border-radius: 14px;
+        font-family: 'Fira Code', monospace;
+        font-size: 12px;
+        background: rgba(26, 18, 12, 0.95);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        color: #f7f1eb;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 15px rgba(245, 158, 11, 0.15);
+        pointer-events: auto;
+        animation: toastIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateY(20px) scale(0.92); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      /* Custom scrollbars */
+      .code-scroll::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .code-scroll::-webkit-scrollbar-track {
+        background: #0d0906;
+      }
+      .code-scroll::-webkit-scrollbar-thumb {
+        background: #2b1c12;
+        border-radius: 3px;
+      }
+      .code-scroll::-webkit-scrollbar-thumb:hover {
+        background: #d97706;
+      }
+    </style>
+  </head>
+  <body class="bg-[#080604] text-[#f7f1eb] min-h-screen font-sans antialiased overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200 relative">
+
+    <!-- Ambient Floating Particle & Synapse Field -->
+    <canvas id="synapse-ambient-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- Top Navigation & Control Bar -->
+    <header class="sticky top-0 z-40 h-16 glass-nav border-b border-amber-900/40 px-4 sm:px-8 flex items-center justify-between gap-4 w-full">
+      <div class="flex items-center gap-3 sm:gap-5 min-w-0">
+        <!-- Back to Portfolio -->
+        <a href="https://whhyy.dev/#projects" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#17100b] hover:bg-[#261910] border border-amber-900/50 text-xs font-mono text-amber-300 hover:text-white transition-all flex-shrink-0">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span class="hidden sm:inline">Portfolio</span>
+        </a>
+
+        <!-- Brand Identity -->
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-orange-700 flex items-center justify-center font-bold text-stone-950 font-mono shadow-md shadow-amber-600/30 flex-shrink-0 text-sm">
+            🧠
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-sm sm:text-base tracking-tight font-mono text-stone-100 truncate">Synapse AI</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-500/30 text-amber-400 font-mono hidden md:inline">DEV WORKSPACE v3.1</span>
+            </div>
+            <p class="text-[11px] text-stone-400 font-mono truncate hidden sm:block">Intelligent Code Synthesis & AST Refactoring Engine</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center & Right Controls -->
+      <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 font-mono text-xs">
+        
+        <!-- Live Active Model Selector -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#140e0a] border border-amber-900/40 text-stone-200">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+          <span class="text-stone-400 text-[11px] hidden xl:inline">MODEL:</span>
+          <select id="model-select" class="bg-transparent text-amber-300 font-bold focus:outline-none cursor-pointer text-xs pr-1">
+            <option value="claude-3-7">Claude 3.7 Sonnet (Thinking)</option>
+            <option value="deepseek-r1">DeepSeek R1 (Deep Reasoner)</option>
+            <option value="gpt-4-5">GPT-4.5 Turbo (Synthesis)</option>
+            <option value="gemini-2-5">Gemini 2.5 Pro (2M Context)</option>
+          </select>
+        </div>
+
+        <!-- Token Usage Telemetry Readout -->
+        <div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-xl bg-[#140e0a] border border-amber-900/40 text-[11px]">
+          <span class="text-stone-400">Tokens:</span>
+          <span class="text-stone-200 font-bold" id="telemetry-tokens">18,420</span>
+          <span class="text-stone-500">•</span>
+          <span class="text-emerald-400 font-bold" id="telemetry-speed">86 tok/s</span>
+        </div>
+
+        <!-- Action: Run Test Suite -->
+        <button id="btn-run-tests" class="px-3 py-1.5 rounded-xl bg-[#1a120c] hover:bg-[#2c1d13] border border-emerald-500/40 text-emerald-300 font-bold transition-all flex items-center gap-1.5">
+          <span>🧪</span>
+          <span class="hidden sm:inline">Run Tests</span>
+        </button>
+
+        <!-- Action: Quick Refactor -->
+        <button id="btn-header-refactor" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-extrabold shadow-md shadow-amber-600/25 transition-all flex items-center gap-1.5 transform active:scale-95">
+          <span>⚡</span>
+          <span>Refactor</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="synapse-container w-full px-4 sm:px-6 lg:px-8 py-5 relative z-10">
+      <div class="workspace-grid">
+
+        <!-- ============================================================= -->
+        <!-- PANE 1: LEFT SIDEBAR (File Tree & AST Symbol Inspector)       -->
+        <!-- ============================================================= -->
+        <aside class="pane-left">
+          
+          <!-- Project Files Tree -->
+          <div class="glass-panel p-4 rounded-2xl border border-amber-900/40 space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-stone-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <span>📁</span>
+                <span>PROJECT TREE</span>
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-500/20">TS 5.4</span>
+            </div>
+
+            <!-- File List -->
+            <div class="space-y-1 pt-1" id="file-tree-container">
+              <div class="file-item px-2.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 cursor-pointer flex items-center justify-between transition-colors" data-file="jwt">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-amber-400 text-xs">📄</span>
+                  <span class="truncate">src/auth/jwt.ts</span>
+                </div>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              </div>
+
+              <div class="file-item px-2.5 py-1.5 rounded-xl hover:bg-white/[0.04] text-stone-400 hover:text-stone-200 cursor-pointer flex items-center justify-between transition-colors" data-file="payment">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-stone-500 text-xs">📄</span>
+                  <span class="truncate">src/services/payment.ts</span>
+                </div>
+                <span class="w-1.5 h-1.5 rounded-full bg-stone-600"></span>
+              </div>
+
+              <div class="file-item px-2.5 py-1.5 rounded-xl hover:bg-white/[0.04] text-stone-400 hover:text-stone-200 cursor-pointer flex items-center justify-between transition-colors" data-file="synapse">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-stone-500 text-xs">📄</span>
+                  <span class="truncate">src/ai/synapse.ts</span>
+                </div>
+                <span class="w-1.5 h-1.5 rounded-full bg-stone-600"></span>
+              </div>
+
+              <div class="file-item px-2.5 py-1.5 rounded-xl hover:bg-white/[0.04] text-stone-400 hover:text-stone-200 cursor-pointer flex items-center justify-between transition-colors" data-file="test">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-emerald-500 text-xs">🧪</span>
+                  <span class="truncate">tests/auth.test.ts</span>
+                </div>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- AST Code Intelligence & Symbol Tree -->
+          <div class="glass-panel p-4 rounded-2xl border border-amber-900/40 space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-stone-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <span>🌲</span>
+                <span>AST SYMBOLS</span>
+              </span>
+              <span class="text-[10px] text-emerald-400" id="ast-node-count">14 Nodes</span>
+            </div>
+
+            <div class="space-y-2 text-[11px]" id="ast-symbol-list">
+              <!-- Dynamically populated symbol list -->
+              <div class="p-2 rounded-xl bg-[#120c08] border border-amber-900/30 flex items-center justify-between">
+                <span class="text-stone-300 font-bold">signAccessToken()</span>
+                <span class="text-purple-400 text-[10px]">Function</span>
+              </div>
+              <div class="p-2 rounded-xl bg-[#120c08] border border-amber-900/30 flex items-center justify-between">
+                <span class="text-stone-300 font-bold">verifyPayload()</span>
+                <span class="text-purple-400 text-[10px]">Function</span>
+              </div>
+              <div class="p-2 rounded-xl bg-[#120c08] border border-amber-900/30 flex items-center justify-between">
+                <span class="text-stone-300 font-bold">TokenPayload</span>
+                <span class="text-cyan-400 text-[10px]">Interface</span>
+              </div>
+              <div class="p-2 rounded-xl bg-[#120c08] border border-amber-900/30 flex items-center justify-between">
+                <span class="text-stone-300 font-bold">TokenCache</span>
+                <span class="text-amber-400 text-[10px]">Class</span>
+              </div>
+            </div>
+
+            <!-- Code Health Metrics -->
+            <div class="pt-2 border-t border-amber-900/30 space-y-1.5 text-[11px]">
+              <div class="flex justify-between">
+                <span class="text-stone-500">Cyclomatic:</span>
+                <span class="text-emerald-400 font-bold">Score 3 (Optimal)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-stone-500">Test Coverage:</span>
+                <span class="text-amber-400 font-bold" id="metric-coverage">92.4%</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-stone-500">Vulnerabilities:</span>
+                <span class="text-emerald-400 font-bold">0 Detected</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Token Budget & Engine Stats -->
+          <div class="glass-panel p-4 rounded-2xl border border-amber-900/40 space-y-3 font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-stone-300 uppercase tracking-wider text-[11px]">CONTEXT WINDOW</span>
+              <span class="text-amber-400 font-bold text-[11px]">9.2%</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full h-2 rounded-full bg-stone-900 border border-amber-900/40 overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-amber-500 to-emerald-400 w-[9.2%]"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-stone-400 pt-0.5">
+              <span>18,420 tokens used</span>
+              <span>200,000 max</span>
+            </div>
+          </div>
+
+        </aside>
+
+        <!-- ============================================================= -->
+        <!-- PANE 2: CENTER STUDIO (Code Editor, AST Neural Canvas & Logs) -->
+        <!-- ============================================================= -->
+        <main class="pane-center">
+
+          <!-- Code Studio Editor Panel -->
+          <div class="glass-panel rounded-3xl border border-amber-900/40 overflow-hidden space-y-0">
+            
+            <!-- Editor Top Tab Bar & Actions -->
+            <div class="px-4 py-2.5 bg-[#120c08] border-b border-amber-900/40 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+              <!-- Active Tabs -->
+              <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-2 px-3 py-1 rounded-xl bg-[#1e150f] border border-amber-500/40 text-stone-100 font-bold text-xs" id="active-tab-title">
+                  <span class="text-amber-400">TS</span>
+                  <span id="tab-filename">jwt.ts</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                </div>
+                <div class="px-2.5 py-1 text-stone-500 hover:text-stone-300 cursor-pointer hidden sm:block">
+                  auth.test.ts
+                </div>
+              </div>
+
+              <!-- Quick Code Actions -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button id="btn-action-refactor" class="px-2.5 py-1 rounded-lg bg-[#1a120c] hover:bg-[#2b1c12] border border-amber-900/40 hover:border-amber-500/40 text-amber-300 font-bold transition-all flex items-center gap-1">
+                  <span>⚡</span>
+                  <span>Refactor</span>
+                </button>
+                <button id="btn-action-explain" class="px-2.5 py-1 rounded-lg bg-[#1a120c] hover:bg-[#2b1c12] border border-amber-900/40 text-stone-300 hover:text-stone-100 transition-all flex items-center gap-1">
+                  <span>💡</span>
+                  <span class="hidden sm:inline">Explain</span>
+                </button>
+                <button id="btn-action-gentests" class="px-2.5 py-1 rounded-lg bg-[#1a120c] hover:bg-[#2b1c12] border border-amber-900/40 text-stone-300 hover:text-stone-100 transition-all flex items-center gap-1">
+                  <span>🧪</span>
+                  <span class="hidden sm:inline">Tests</span>
+                </button>
+                <button id="btn-action-security" class="px-2.5 py-1 rounded-lg bg-[#1a120c] hover:bg-[#2b1c12] border border-amber-900/40 text-stone-300 hover:text-stone-100 transition-all flex items-center gap-1">
+                  <span>🔒</span>
+                  <span class="hidden sm:inline">Audit</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Diff Review Banner (Hidden by default, shown when refactor diff is pending) -->
+            <div id="diff-banner" class="hidden px-4 py-2.5 bg-amber-950/80 border-b border-amber-500/40 items-center justify-between gap-3 font-mono text-xs animate-pulse">
+              <div class="flex items-center gap-2 text-amber-300">
+                <span>⚡</span>
+                <span class="font-bold">AI Proposed Refactor:</span>
+                <span class="text-stone-300 hidden sm:inline">Added automatic key rotation & explicit error bounds (+6 lines, -2 lines)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btn-accept-diff" class="px-3 py-1 rounded-lg bg-emerald-500 text-stone-950 font-bold hover:bg-emerald-400 transition-colors">
+                  Accept Diff ✓
+                </button>
+                <button id="btn-reject-diff" class="px-2.5 py-1 rounded-lg bg-[#1a120c] text-stone-400 hover:text-stone-200 transition-colors">
+                  Reject ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- Code Editor Workspace -->
+            <div class="relative w-full h-[360px] sm:h-[400px] bg-[#0b0805] font-mono text-xs overflow-auto code-scroll flex">
+              <!-- Line Numbers Gutter -->
+              <div id="editor-gutter" class="w-12 py-4 select-none text-stone-600 text-right pr-3 border-r border-amber-900/20 bg-[#0d0906] flex-shrink-0 space-y-0.5">
+                <!-- Injected via JavaScript -->
+              </div>
+
+              <!-- Code Content Display -->
+              <pre id="editor-code" class="p-4 flex-1 overflow-x-auto leading-relaxed text-stone-200">
+                <!-- Injected via JavaScript -->
+              </pre>
+            </div>
+
+            <!-- Editor Status Footer -->
+            <div class="px-4 py-2 bg-[#0e0a07] border-t border-amber-900/30 flex flex-wrap items-center justify-between text-[11px] font-mono text-stone-400">
+              <div class="flex items-center gap-3">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span id="editor-status-text">TypeScript • Ready</span>
+                </span>
+                <span>UTF-8</span>
+                <span id="editor-cursor-pos">Ln 14, Col 22</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-amber-400">ESNext • Strict Mode</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Interactive AST Neural Network Canvas -->
+          <div class="glass-panel p-4 sm:p-5 rounded-3xl border border-amber-900/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-stone-100 font-mono flex items-center gap-2">
+                  <span>AST Neural Topology</span>
+                  <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                </h3>
+                <p class="text-[11px] text-stone-400 font-mono">Live Abstract Syntax Tree node relations & dependency graph</p>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300">
+                Interactive Canvas 2D
+              </span>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative w-full h-[160px] sm:h-[180px] rounded-2xl bg-[#0b0806] border border-amber-900/30 overflow-hidden">
+              <canvas id="ast-neural-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+            </div>
+          </div>
+
+          <!-- Bottom Execution Terminal & Jest Runner -->
+          <div class="glass-panel rounded-3xl border border-amber-900/40 overflow-hidden">
+            <!-- Terminal Header Tabs -->
+            <div class="px-4 py-2 bg-[#120c08] border-b border-amber-900/40 flex items-center justify-between font-mono text-xs">
+              <div class="flex items-center gap-2">
+                <button data-term="test" class="term-tab-btn px-2.5 py-1 rounded-lg bg-amber-500 text-stone-950 font-bold transition-colors">
+                  🧪 Jest Test Suite
+                </button>
+                <button data-term="terminal" class="term-tab-btn px-2.5 py-1 rounded-lg text-stone-400 hover:text-stone-200 transition-colors">
+                  >_ Terminal
+                </button>
+                <button data-term="audit" class="term-tab-btn px-2.5 py-1 rounded-lg text-stone-400 hover:text-stone-200 transition-colors">
+                  🔒 Security Audit
+                </button>
+              </div>
+
+              <button id="btn-clear-terminal" class="text-stone-500 hover:text-stone-300 text-[11px] transition-colors">
+                Clear ⌫
+              </button>
+            </div>
+
+            <!-- Terminal Output Logs -->
+            <div id="terminal-output" class="p-4 h-[160px] overflow-y-auto font-mono text-[11px] leading-relaxed bg-[#0a0705] text-stone-300 space-y-1 code-scroll">
+              <!-- Logs dynamically generated -->
+            </div>
+          </div>
+
+        </main>
+
+        <!-- ============================================================= -->
+        <!-- PANE 3: RIGHT SIDEBAR (AI Copilot & Reasoning Stream)         -->
+        <!-- ============================================================= -->
+        <aside class="pane-right">
+
+          <!-- AI Copilot Engine Card -->
+          <div class="glass-panel p-4 sm:p-5 rounded-3xl border border-amber-900/40 space-y-4 font-mono text-xs flex flex-col h-full">
+            
+            <!-- Copilot Header -->
+            <div class="flex items-center justify-between border-b border-amber-900/30 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 text-xs font-bold">
+                  ✨
+                </div>
+                <div>
+                  <h3 class="font-bold text-stone-100 text-sm">Synapse Copilot</h3>
+                  <p class="text-[10px] text-stone-400" id="copilot-model-label">Claude 3.7 Sonnet</p>
+                </div>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                ACTIVE
+              </span>
+            </div>
+
+            <!-- Collapsible <thought> Reasoning Stream -->
+            <div class="rounded-2xl bg-[#120b08] border border-amber-900/40 p-3.5 space-y-2">
+              <div class="flex items-center justify-between cursor-pointer" id="toggle-thought-btn">
+                <div class="flex items-center gap-2 text-amber-400 font-bold text-[11px]">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                  <span>THINKING REASONING STREAM</span>
+                </div>
+                <span class="text-stone-500 text-xs" id="thought-chevron">▼</span>
+              </div>
+              <div id="thought-content" class="text-[11px] text-stone-400 font-mono leading-relaxed max-h-36 overflow-y-auto border-t border-amber-900/20 pt-2 space-y-1 code-scroll">
+                <p class="text-amber-300/80">> Parsing AST tree for potential race condition in JWT secret validation...</p>
+                <p>> Discovered uncached cryptographic key generation on line 28.</p>
+                <p>> Synthesizing LRU cache with automatic 3600s TTL key rotation to prevent OOM memory leak.</p>
+              </div>
+            </div>
+
+            <!-- Chat Stream Conversation Messages -->
+            <div id="copilot-chat-stream" class="space-y-3 flex-1 max-h-[320px] overflow-y-auto pr-1 code-scroll">
+              
+              <!-- Assistant Message -->
+              <div class="p-3.5 rounded-2xl bg-[#140e0a] border border-amber-900/30 space-y-2 text-xs leading-relaxed">
+                <div class="flex items-center justify-between text-[10px] text-stone-400">
+                  <span class="text-amber-400 font-bold">Synapse Assistant</span>
+                  <span>Just now</span>
+                </div>
+                <p class="text-stone-300">
+                  Workspace loaded with <code class="text-amber-300 bg-amber-950/60 px-1 py-0.5 rounded">src/auth/jwt.ts</code>. I performed an AST scan and found 1 optimization opportunity: add token caching to eliminate redundant HMAC re-computations.
+                </p>
+                <div class="pt-1">
+                  <button id="btn-copilot-quick-fix" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-[11px] transition-colors flex items-center gap-1">
+                    <span>⚡ Apply Recommended Patch</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Quick Prompt Suggestion Chips -->
+            <div class="space-y-1.5 pt-1">
+              <span class="text-[10px] text-stone-500 block">QUICK ACTIONS:</span>
+              <div class="flex flex-wrap gap-1.5">
+                <button class="prompt-chip px-2.5 py-1 rounded-xl bg-[#140e0a] hover:bg-[#201610] border border-amber-900/40 text-stone-300 hover:text-amber-300 text-[11px] transition-colors" data-prompt="Optimize memory leak and add LRU cache">
+                  Optimize Memory
+                </button>
+                <button class="prompt-chip px-2.5 py-1 rounded-xl bg-[#140e0a] hover:bg-[#201610] border border-amber-900/40 text-stone-300 hover:text-amber-300 text-[11px] transition-colors" data-prompt="Generate comprehensive Jest unit test cases">
+                  Generate Tests
+                </button>
+                <button class="prompt-chip px-2.5 py-1 rounded-xl bg-[#140e0a] hover:bg-[#201610] border border-amber-900/40 text-stone-300 hover:text-amber-300 text-[11px] transition-colors" data-prompt="Perform zero-trust security audit on token verification">
+                  Security Audit
+                </button>
+              </div>
+            </div>
+
+            <!-- Chat Input Area -->
+            <form id="copilot-input-form" class="space-y-2 pt-2 border-t border-amber-900/30">
+              <div class="relative w-full">
+                <textarea id="copilot-input" rows="2" placeholder="Ask Synapse to refactor, debug, or write tests... (Ctrl+Enter to send)" class="w-full px-3.5 py-2.5 rounded-2xl bg-[#100b07] border border-amber-900/40 text-stone-200 placeholder:text-stone-600 focus:outline-none focus:border-amber-500/60 resize-none text-xs transition-colors"></textarea>
+                <button type="submit" id="btn-send-copilot" class="absolute right-2.5 bottom-3.5 px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-md shadow-amber-600/20 transition-all flex items-center gap-1">
+                  <span>Send</span>
+                  <span>↵</span>
+                </button>
+              </div>
+            </form>
+
+          </div>
+
+        </aside>
+
+      </div>
+    </main>
+
+    <!-- Toast Feedback System -->
+    <div id="toast-container"></div>
+
+    <!-- Script Entrypoint -->
+    <script type="module" src="./synapse.js"></script>
+  </body>
+</html>
+
